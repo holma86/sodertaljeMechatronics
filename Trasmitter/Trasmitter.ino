@@ -7,16 +7,21 @@
 RF24 radio(7, 8); // CE, CSN
 const byte address[6] = "00001";
 
+/* Number of bits for the parameter adress */
 int prefixBits = 4;
 
+/* Button setup */
 int buttonBits = 4;
 int buttonPin[4] = {2, 3, 4, 5};
 int buttonShift = prefixBits;
 int buttonAdress = 0;
+int buttonVal[4];
 unsigned long buttonMask[4];
-unsigned long buttonVal[4];
 unsigned long sendButtonData;
 
+/* Joystick1 setup */
+int joystick1Xval;
+int joystick1Yval;
 int joystick1Xbits = 10;
 int joystick1Ybits = 10;
 int joystick1XPin = A0;
@@ -24,14 +29,14 @@ int joystick1YPin = A1;
 int joystick1XShift = prefixBits;
 int joystick1YShift = joystick1XShift + joystick1Xbits;
 int joystick1Adress = 1;
+int joystick1ButtonPin = buttonPin[0];
 unsigned long joystick1XMask;
 unsigned long joystick1YMask;
-unsigned long joystick1Xval = 0UL;
-unsigned long joystick1Yval = 0UL;
 unsigned long sendJoystick1Data = 0UL;
 
-
-
+/* Joystick2 setup */
+int joystick2Xval;
+int joystick2Yval;
 int joystick2Xbits = 10;
 int joystick2Ybits = 10;
 int joystick2XPin = A2;
@@ -39,22 +44,20 @@ int joystick2YPin = A3;
 int joystick2XShift = prefixBits;
 int joystick2YShift = joystick2XShift + joystick2Xbits;
 int joystick2Adress = 2;
+int joystick2ButtonPin = buttonPin[1];
 unsigned long joystick2XMask;
 unsigned long joystick2YMask;
-unsigned long joystick2Xval = 0UL;
-unsigned long joystick2Yval = 0UL;
 unsigned long sendJoystick2Data = 0UL;
 
-
-
-void setup() {  
+void setup() {
+  Serial.begin(500000); 
   radio.begin();
   radio.openWritingPipe(address);
   radio.setPALevel(RF24_PA_MIN);
   radio.stopListening();
   for (int i=0; i < buttonBits; i++)
   {
-    pinMode(buttonPin[i], INPUT);    // declare pushbutton as input
+    pinMode(buttonPin[i], INPUT);
     buttonMask[i] = 1UL << (i + buttonShift);
   }
   joystick1XMask = 0UL;
@@ -79,7 +82,7 @@ void setup() {
   }
 }
 
-// the loop function runs over and over again forever
+/* Main function */
 void loop() 
 {
   sendButtonData = 0UL;
@@ -87,24 +90,39 @@ void loop()
   sendJoystick2Data = 0UL;
   for (int i=0; i < buttonBits; i++)
   {
+    
     if (digitalRead(buttonPin[i]) == HIGH)
     {
-      buttonVal[i] = buttonMask[i];
+      buttonVal[i] = 1;
     }
     else
     {
-      buttonVal[i] = 0UL;
+      buttonVal[i] = 0;
     }
-    sendButtonData = sendButtonData | buttonVal[i];
+    if  ((buttonPin[i] == joystick1ButtonPin) ||
+         (buttonPin[i] == joystick2ButtonPin))
+    {
+      buttonVal[i] ^= 1; //inverts button logic for joystick
+    }
+    sendButtonData |= (buttonMask[i]*buttonVal[i]);
   }
-  joystick1Xval = ((unsigned long)analogRead(joystick1XPin) << joystick1XShift);
-  joystick1Yval = ((unsigned long)analogRead(joystick1YPin) << joystick1YShift);
-  joystick2Xval = ((unsigned long)analogRead(joystick2XPin) << joystick2XShift);
-  joystick2Yval = ((unsigned long)analogRead(joystick2YPin) << joystick2YShift);
-  sendButtonData = sendButtonData | buttonAdress;
-  sendJoystick1Data = joystick1Xval | joystick1Yval | joystick1Adress;
-  sendJoystick2Data = joystick2Xval | joystick2Yval | joystick2Adress;
+  joystick1Xval = (unsigned long)analogRead(joystick1XPin);
+  joystick1Yval = (unsigned long)analogRead(joystick1YPin);
+  joystick2Xval = (unsigned long)analogRead(joystick2XPin);
+  joystick2Yval = (unsigned long)analogRead(joystick2YPin);
+  
+  unsigned long test1 = 1UL << 31;
+  sendButtonData = sendButtonData | buttonAdress | test1;
+  sendJoystick1Data = (((unsigned long)joystick1Xval << joystick1XShift) | 
+                       ((unsigned long)joystick1Yval << joystick1YShift) | 
+                        joystick1Adress | test1);
+  sendJoystick2Data = (((unsigned long)joystick2Xval << joystick2XShift) | 
+                       ((unsigned long)joystick2Yval << joystick2YShift) | 
+                        joystick2Adress | test1);
   radio.write(&sendButtonData, sizeof(sendButtonData));
   radio.write(&sendJoystick1Data, sizeof(sendJoystick1Data));
   radio.write(&sendJoystick2Data, sizeof(sendJoystick2Data));
+  Serial.println(sendButtonData, BIN);
+  Serial.println(sendJoystick1Data, BIN);
+  Serial.println(sendJoystick2Data, BIN);
 }
