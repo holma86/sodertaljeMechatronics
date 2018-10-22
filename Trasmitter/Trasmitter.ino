@@ -32,7 +32,7 @@ int joystick1Adress = 1;
 int joystick1ButtonPin = buttonPin[0];
 unsigned long joystick1XMask;
 unsigned long joystick1YMask;
-unsigned long sendJoystick1Data = 0UL;
+unsigned long sendJoystick1Data;
 
 /* Joystick2 setup */
 int joystick2Xval;
@@ -47,7 +47,7 @@ int joystick2Adress = 2;
 int joystick2ButtonPin = buttonPin[1];
 unsigned long joystick2XMask;
 unsigned long joystick2YMask;
-unsigned long sendJoystick2Data = 0UL;
+unsigned long sendJoystick2Data;
 
 void setup() {
   Serial.begin(500000); 
@@ -106,10 +106,10 @@ void loop()
     }
     sendButtonData |= (buttonMask[i]*buttonVal[i]);
   }
-  joystick1Xval = (unsigned long)analogRead(joystick1XPin);
-  joystick1Yval = (unsigned long)analogRead(joystick1YPin);
-  joystick2Xval = (unsigned long)analogRead(joystick2XPin);
-  joystick2Yval = (unsigned long)analogRead(joystick2YPin);
+  joystick1Xval = analogRead(joystick1XPin);
+  joystick1Yval = analogRead(joystick1YPin);
+  joystick2Xval = analogRead(joystick2XPin);
+  joystick2Yval = analogRead(joystick2YPin);
   
   unsigned long test1 = 1UL << 31;
   sendButtonData = sendButtonData | buttonAdress | test1;
